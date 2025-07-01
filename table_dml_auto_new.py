@@ -1,3 +1,4 @@
+
 import os
 import oracledb
 import random
@@ -7,6 +8,15 @@ import sys
 from faker import Faker
 
 fake = Faker()
+
+#Purpose: 
+#This script generates mock DELETE, INSERT, and UPDATE SQL statements for a specified Oracle table,
+#using meaningful fake data for VARCHAR2/CHAR columns (via the Faker library). It supports Oracle 
+#check constraints, identity columns, and sequence columns, and writes the generated SQL to an 
+#output file. Useful for testing, development, and populating Oracle tables with sample data.
+
+#Developed by: Debasish Ghosh
+#Date: June 2025
 
 #oracledb.init_oracle_client(lib_dir=r"C:\path\to\instantclient")
 # Load Oracle connection details from environment variables or a .env file
