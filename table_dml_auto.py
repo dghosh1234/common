@@ -1,10 +1,10 @@
 Option Explicit
 
-Dim tbl, col
 Dim fso, file, filePath
-Dim dataTypeRaw, semantics, suggestion, len, lineOut
+Dim tbl, col
+Dim dataTypeRaw, semantics, cleanLength, suggestion, outputLine
 
-' File path on desktop
+' File path on Desktop
 filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\varchar2_semantics_report.csv"
 
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -16,27 +16,31 @@ For Each tbl In ActiveModel.Tables
     If Not tbl.IsShortcut Then
         For Each col In tbl.Columns
             dataTypeRaw = UCase(col.DataType)
-            
-            If InStr(dataTypeRaw, "VARCHAR2") > 0 Then
-                ' Default values
-                len = col.Length
-                semantics = ""
-                suggestion = ""
 
-                ' Detect semantics from data type
+            If InStr(dataTypeRaw, "VARCHAR2") > 0 Then
+                cleanLength = col.Length
+                semantics = ""
+
+                ' Extract semantics from datatype string first
                 If InStr(dataTypeRaw, "CHAR") > 0 Then
                     semantics = "CHAR"
                 ElseIf InStr(dataTypeRaw, "BYTE") > 0 Then
                     semantics = "BYTE"
                 Else
-                    semantics = ""  ' Means BYTE is implicit
+                    ' Fallback: check extended attribute
+                    On Error Resume Next
+                    semantics = col.GetExtendedAttribute("LengthSemantics")
+                    If Err.Number <> 0 Then semantics = "" : Err.Clear
+                    On Error GoTo 0
+                    semantics = UCase(Trim(semantics))
+                    If semantics = "" Then semantics = "BYTE"
                 End If
 
-                ' If not already CHAR, suggest changing
+                ' Only flag if not already CHAR
                 If semantics <> "CHAR" Then
-                    suggestion = "Change it to VARCHAR2(" & len & " CHAR)"
-                    lineOut = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & len & """,""" & semantics & """,""" & suggestion & """"
-                    file.WriteLine lineOut
+                    suggestion = "Change to VARCHAR2(" & cleanLength & " CHAR)"
+                    outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & cleanLength & """,""" & semantics & """,""" & suggestion & """"
+                    file.WriteLine outputLine
                 End If
             End If
         Next
