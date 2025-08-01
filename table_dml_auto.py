@@ -1,46 +1,50 @@
 Option Explicit
 
-Dim tbl, col
-Dim fso, file, filePath
-Dim semVal, suggestion, lineOut
-Dim dataTypeUpper, len
+Dim tbl, col, semantics, cleanLength
+Dim output, discrepFound, discrepCount
+Dim fso, outFile, filePath
 
-' Output file on desktop
-filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\VARCHAR2_Char_Semantics_Report.csv"
-
-Set fso = CreateObject("Scripting.FileSystemObject")
-Set file = fso.CreateTextFile(filePath, True)
-
-file.WriteLine "Table Name,Column Name,Data Type,Length,Semantics,Suggestion"
+output = "Discrepancy Report: VARCHAR2 columns with BYTE semantics" & vbCrLf & vbCrLf
+discrepFound = False
+discrepCount = 0
 
 For Each tbl In ActiveModel.Tables
     If Not tbl.IsShortcut Then
         For Each col In tbl.Columns
-            dataTypeUpper = UCase(col.DataType)
-
-            ' Only interested in VARCHAR2 data type (not already CHAR-based)
-            If InStr(dataTypeUpper, "VARCHAR2") > 0 And InStr(dataTypeUpper, "CHAR") = 0 Then
-                len = col.Length
-
-                ' Get semantics safely
+            If InStr(UCase(col.DataType), "VARCHAR2") > 0 Then
                 On Error Resume Next
-                semVal = col.GetExtendedAttribute("LengthSemantics")
-                If Err.Number <> 0 Then semVal = "" : Err.Clear
+                semantics = col.GetExtendedAttribute("LengthSemantics")
+                If Err.Number <> 0 Then
+                    semantics = "(not available)"
+                    Err.Clear
+                End If
                 On Error GoTo 0
 
-                semVal = UCase(Trim(semVal))
+                cleanLength = col.Length
 
-                ' Only include columns NOT already using CHAR semantics
-                If semVal <> "CHAR" Then
-                    suggestion = "Change to VARCHAR2(" & len & " CHAR)"
-                    lineOut = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & len & """,""" & semVal & """,""" & suggestion & """"
-                    file.WriteLine lineOut
+                If UCase(semantics) <> "CHAR" Then
+                    discrepFound = True
+                    discrepCount = discrepCount + 1
+                    output = output & "Table: " & tbl.Code & vbCrLf
+                    output = output & "  Column: " & col.Code & vbCrLf
+                    output = output & "    DataType: " & col.DataType & vbCrLf
+                    output = output & "    Length: " & cleanLength & vbCrLf
+                    output = output & "    Semantics: " & semantics & vbCrLf
+                    output = output & "    ❗ Suggestion: Change to VARCHAR2(" & cleanLength & " CHAR)" & vbCrLf & vbCrLf
                 End If
             End If
         Next
     End If
 Next
 
-file.Close
-
-MsgBox "✅ VARCHAR2 CHAR Semantics report generated at:" & vbCrLf & filePath, vbInformation, "Scan Complete"
+If discrepFound Then
+    ' Save to file for large output
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    filePath = fso.GetSpecialFolder(2) & "\varchar2_semantics_report.txt" ' 2 = TemporaryFolder
+    Set outFile = fso.CreateTextFile(filePath, True)
+    outFile.Write output
+    outFile.Close
+    MsgBox "Discrepancy report generated (" & discrepCount & " issues found)." & vbCrLf & "Saved to: " & filePath, vbInformation, "Report Complete"
+Else
+    MsgBox "No VARCHAR2 columns with BYTE semantics found in the model.", vbInformation, "All Good"
+End If
