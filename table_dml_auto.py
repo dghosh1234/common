@@ -18,7 +18,8 @@ For Each tbl In ActiveModel.Tables
     If Not tbl.IsShortcut And UCase(tbl.Code) = UCase(tblName) Then
         foundTable = True
         For Each col In tbl.Columns
-            If UCase(col.DataType) = "VARCHAR2" Then
+            ' Use InStr to match anything that contains VARCHAR2
+            If InStr(UCase(col.DataType), "VARCHAR2") > 0 Then
                 foundVarchar = True
 
                 On Error Resume Next
