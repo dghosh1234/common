@@ -1,77 +1,40 @@
 Option Explicit
 
-Dim mdl
-Set mdl = ActiveModel
-
-If mdl Is Nothing Then
-    MsgBox "❌ No active model detected. Please make sure a PDM is open and selected.", vbCritical, "Script Error"
-    WScript.Quit
-End If
-
-MsgBox "✅ Active model name: " & mdl.Name & vbCrLf & _
-       "Model Type: " & mdl.Type & vbCrLf & _
-       "Number of Tables: " & mdl.Tables.Count, vbInformation, "Model Info"
-
 Dim tbl, col
-For Each tbl In mdl.Tables
-    MsgBox "Table: " & tbl.Code & ", Columns: " & tbl.Columns.Count
-    For Each col In tbl.Columns
-        MsgBox "  → Column: " & col.Code & ", DataType: " & col.DataType
-    Next
-Next
-
-
-
-Option Explicit
-
 Dim fso, file, filePath
-Dim tbl, col
-Dim dataTypeRaw, semantics, cleanLength, suggestion, outputLine
+Dim semVal, suggestion, lineOut
+Dim dataTypeUpper, len
 
-' 🔍 Ensure a model is loaded
-If ActiveModel Is Nothing Then
-    MsgBox "❌ No active model found. Please open a model and try again.", vbCritical, "Model Not Found"
-    WScript.Quit
-End If
-
-' File path on Desktop
-filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\varchar2_semantics_report.csv"
+' Output file on desktop
+filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\VARCHAR2_Char_Semantics_Report.csv"
 
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set file = fso.CreateTextFile(filePath, True)
 
 file.WriteLine "Table Name,Column Name,Data Type,Length,Semantics,Suggestion"
 
-' Loop through all tables and columns
 For Each tbl In ActiveModel.Tables
     If Not tbl.IsShortcut Then
         For Each col In tbl.Columns
-            dataTypeRaw = UCase(col.DataType)
+            dataTypeUpper = UCase(col.DataType)
 
-            If InStr(dataTypeRaw, "VARCHAR2") > 0 Then
-                cleanLength = col.Length
-                semantics = ""
+            ' Only interested in VARCHAR2 data type (not already CHAR-based)
+            If InStr(dataTypeUpper, "VARCHAR2") > 0 And InStr(dataTypeUpper, "CHAR") = 0 Then
+                len = col.Length
 
-                ' Check for CHAR/BYTE in DataType string first
-                If InStr(dataTypeRaw, "CHAR") > 0 Then
-                    semantics = "CHAR"
-                ElseIf InStr(dataTypeRaw, "BYTE") > 0 Then
-                    semantics = "BYTE"
-                Else
-                    ' Fallback: try to read LengthSemantics extended attribute
-                    On Error Resume Next
-                    semantics = col.GetExtendedAttribute("LengthSemantics")
-                    If Err.Number <> 0 Then semantics = "" : Err.Clear
-                    On Error GoTo 0
-                    semantics = UCase(Trim(semantics))
-                    If semantics = "" Then semantics = "BYTE"
-                End If
+                ' Get semantics safely
+                On Error Resume Next
+                semVal = col.GetExtendedAttribute("LengthSemantics")
+                If Err.Number <> 0 Then semVal = "" : Err.Clear
+                On Error GoTo 0
 
-                ' Only flag if semantics is not CHAR
-                If semantics <> "CHAR" Then
-                    suggestion = "Change to VARCHAR2(" & cleanLength & " CHAR)"
-                    outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & cleanLength & """,""" & semantics & """,""" & suggestion & """"
-                    file.WriteLine outputLine
+                semVal = UCase(Trim(semVal))
+
+                ' Only include columns NOT already using CHAR semantics
+                If semVal <> "CHAR" Then
+                    suggestion = "Change to VARCHAR2(" & len & " CHAR)"
+                    lineOut = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & len & """,""" & semVal & """,""" & suggestion & """"
+                    file.WriteLine lineOut
                 End If
             End If
         Next
@@ -80,4 +43,4 @@ Next
 
 file.Close
 
-MsgBox "✅ Report generated successfully at: " & filePath, vbInformation, "Varchar2 Semantics Check"
+MsgBox "✅ VARCHAR2 CHAR Semantics report generated at:" & vbCrLf & filePath, vbInformation, "Scan Complete"
