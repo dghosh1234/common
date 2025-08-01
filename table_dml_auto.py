@@ -1,3 +1,59 @@
+
+Option Explicit
+
+Dim tbl, col
+Dim fso, file, filePath
+Dim semantics, suggestion
+Dim outputLine
+
+' Set output file path — saves to Desktop
+filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\varchar2_semantics_report.csv"
+
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set file = fso.CreateTextFile(filePath, True)
+
+' Write CSV header
+file.WriteLine "Table Name,Column Name,Data Type,Length,Semantics,Suggestion"
+
+' Loop through all tables
+For Each tbl In ActiveModel.Tables
+    If Not tbl.IsShortcut Then
+        For Each col In tbl.Columns
+            ' Check if column is VARCHAR2
+            If InStr(UCase(col.DataType), "VARCHAR2") > 0 Then
+                
+                ' Get Length Semantics
+                On Error Resume Next
+                semantics = col.GetExtendedAttribute("LengthSemantics")
+                If Err.Number <> 0 Then
+                    semantics = ""
+                    Err.Clear
+                End If
+                On Error GoTo 0
+
+                ' Normalize values
+                semantics = Trim(UCase(semantics))
+                Dim dataTypeUpper
+                dataTypeUpper = UCase(col.DataType)
+
+                ' Include ONLY if semantics is not CHAR and datatype doesn't already contain (n CHAR)
+                If semantics <> "CHAR" And InStr(dataTypeUpper, "CHAR") = 0 Then
+                    suggestion = "Change to VARCHAR2(" & col.Length & " CHAR) semantics"
+
+                    outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & col.Length & """,""" & semantics & """,""" & suggestion & """"
+                    file.WriteLine outputLine
+                End If
+            End If
+        Next
+    End If
+Next
+
+file.Close
+
+MsgBox "✅ Report saved to: " & filePath, vbInformation, "VARCHAR2 Semantics CSV Report"
+
+======================
+
 ' Loop through all tables
 For Each tbl In ActiveModel.Tables
     If Not tbl.IsShortcut Then
