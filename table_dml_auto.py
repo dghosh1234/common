@@ -253,4 +253,3 @@ Let me know if you want versions that:
 * Log changes to a text file
 * Only update columns longer than N characters
 * Exclude specific columns (e.g., ID, GUID)
-
