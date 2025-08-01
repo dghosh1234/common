@@ -1,5 +1,17 @@
 Option Explicit
 
+If ActiveModel Is Nothing Then
+    MsgBox "❌ No model is active!", vbCritical
+Else
+    MsgBox "✅ Active model name: " & ActiveModel.Name & vbCrLf & _
+           "Model Type: " & ActiveModel.Type & vbCrLf & _
+           "Number of tables: " & ActiveModel.Tables.Count
+End If
+
+
+
+Option Explicit
+
 Dim fso, file, filePath
 Dim tbl, col
 Dim dataTypeRaw, semantics, cleanLength, suggestion, outputLine
