@@ -2,6 +2,61 @@ Option Explicit
 
 Dim tblName, tbl, col
 Dim output, semantics
+Dim foundTable, foundVarchar
+
+tblName = InputBox("Enter the table code (not name) to inspect:", "Table Selector")
+If tblName = "" Then
+    MsgBox "No table name provided. Exiting.", vbExclamation, "Canceled"
+    WScript.Quit
+End If
+
+foundTable = False
+foundVarchar = False
+output = "Inspecting VARCHAR2 columns in table: " & tblName & vbCrLf & vbCrLf
+
+For Each tbl In ActiveModel.Tables
+    If Not tbl.IsShortcut And UCase(tbl.Code) = UCase(tblName) Then
+        foundTable = True
+        For Each col In tbl.Columns
+            If UCase(col.DataType) = "VARCHAR2" Then
+                foundVarchar = True
+
+                On Error Resume Next
+                semantics = col.GetExtendedAttribute("LengthSemantics")
+                If Err.Number <> 0 Then
+                    semantics = "(not available)"
+                    Err.Clear
+                End If
+                On Error GoTo 0
+                
+                output = output & "  Column: " & col.Code & vbCrLf
+                output = output & "    DataType: '" & col.DataType & "'" & vbCrLf
+                output = output & "    Length: " & col.Length & vbCrLf
+                output = output & "    Semantics: " & semantics & vbCrLf
+
+                If UCase(semantics) <> "CHAR" Then
+                    output = output & "    --> Needs update to CHAR semantics" & vbCrLf
+                End If
+                output = output & vbCrLf
+            End If
+        Next
+        Exit For
+    End If
+Next
+
+If Not foundTable Then
+    MsgBox "❌ Table '" & tblName & "' not found in the model.", vbCritical, "Error"
+ElseIf Not foundVarchar Then
+    MsgBox "✅ Table '" & tblName & "' found, but no VARCHAR2 columns exist.", vbInformation, "No Columns"
+Else
+    MsgBox output, vbOKOnly, "VARCHAR2 Semantics Check"
+End If
+
+
+Option Explicit
+
+Dim tblName, tbl, col
+Dim output, semantics
 Dim found
 
 tblName = InputBox("Enter the table code (not name) to inspect:", "Table Selector")
