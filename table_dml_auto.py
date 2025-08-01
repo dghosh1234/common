@@ -38,9 +38,8 @@ For Each tbl In ActiveModel.Tables
 Next
 
 If discrepFound Then
-    ' Save to file for large output
     Set fso = CreateObject("Scripting.FileSystemObject")
-    filePath = fso.GetSpecialFolder(2) & "\varchar2_semantics_report.txt" ' 2 = TemporaryFolder
+    filePath = "C:\Users\Public\varchar2_semantics_report.txt" ' Change this path if needed
     Set outFile = fso.CreateTextFile(filePath, True)
     outFile.Write output
     outFile.Close
