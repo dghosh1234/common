@@ -2,36 +2,33 @@ Option Explicit
 
 Dim tbl, col
 Dim targetTableCode
-Dim found, affectedCount
-Dim report
-Dim runCheck
+Dim found, updatedCount
+Dim runUpdate
 
 ' Initialize
-affectedCount = 0
+updatedCount = 0
 found = False
-runCheck = True
-report = ""
+runUpdate = True
 
 ' Prompt user for PHYSICAL table name (Code)
-targetTableCode = InputBox("Enter the physical table name to check (case-insensitive):", "Target Table")
+targetTableCode = InputBox("Enter the physical table name to update (e.g. CUSTOMER_TBL):", "Target Table")
 
 If targetTableCode = "" Then
     MsgBox "No table name entered. Script cancelled.", vbExclamation, "Cancelled"
-    runCheck = False
+    runUpdate = False
 End If
 
-If runCheck Then
-    report = "Columns in table '" & targetTableCode & "' that would be updated to VARCHAR2(n CHAR):" & vbCrLf
-
-    ' Match on physical table name (Code)
+If runUpdate Then
+    ' Search for the table using .Code (physical name)
     For Each tbl In ActiveModel.Tables
         If Not tbl.IsShortcut And UCase(tbl.Code) = UCase(targetTableCode) Then
             found = True
             For Each col In tbl.Columns
                 If UCase(col.DataType) = "VARCHAR2" Then
-                    If col.LengthSemantics <> "CHAR" Then
-                        report = report & "- Column: " & col.Code & " (business name: " & col.Name & "), Length: " & col.Length & vbCrLf
-                        affectedCount = affectedCount + 1
+                    ' Corrected check to catch empty or non-CHAR semantics
+                    If Trim(UCase(col.LengthSemantics)) <> "CHAR" Then
+                        col.LengthSemantics = "CHAR"
+                        updatedCount = updatedCount + 1
                     End If
                 End If
             Next
@@ -40,9 +37,9 @@ If runCheck Then
 
     If Not found Then
         MsgBox "Table with code '" & targetTableCode & "' not found in the model.", vbExclamation, "Table Not Found"
-    ElseIf affectedCount = 0 Then
-        MsgBox "All VARCHAR2 columns in table '" & targetTableCode & "' already use CHAR semantics.", vbInformation, "Dry Run Complete"
+    ElseIf updatedCount = 0 Then
+        MsgBox "No VARCHAR2 columns needed updating in table '" & targetTableCode & "'.", vbInformation, "No Changes Made"
     Else
-        MsgBox report & vbCrLf & "Total: " & affectedCount & " column(s) would be updated.", vbInformation, "Dry Run Complete"
+        MsgBox updatedCount & " VARCHAR2 column(s) in table '" & targetTableCode & "' updated to use CHAR semantics.", vbInformation, "Update Complete"
     End If
 End If
