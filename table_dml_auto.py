@@ -1,3 +1,32 @@
+' Loop through all tables
+For Each tbl In ActiveModel.Tables
+    If Not tbl.IsShortcut Then
+        For Each col In tbl.Columns
+            If InStr(UCase(col.DataType), "VARCHAR2") > 0 Then
+                On Error Resume Next
+                semantics = col.GetExtendedAttribute("LengthSemantics")
+                If Err.Number <> 0 Then
+                    semantics = ""
+                    Err.Clear
+                End If
+                On Error GoTo 0
+
+                ' Normalize values
+                semantics = Trim(UCase(semantics))
+                
+                ' Only generate row if semantics is not CHAR and DataType does NOT already contain CHAR
+                If semantics <> "CHAR" And InStr(UCase(col.DataType), "CHAR") = 0 Then
+                    suggestion = "Change to VARCHAR2(" & col.Length & " CHAR) semantics"
+
+                    outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & col.Length & """,""" & semantics & """,""" & suggestion & """"
+                    file.WriteLine outputLine
+                End If
+            End If
+        Next
+    End If
+Next
+
+
 Option Explicit
 
 Dim tbl, col
