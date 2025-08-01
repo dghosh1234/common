@@ -1,33 +1,46 @@
 Option Explicit
 
-Dim tbl, col
+Dim tblName, tbl, col
 Dim output, semantics
+Dim found
 
-output = "Inspecting all VARCHAR2 columns in the Physical Model:" & vbCrLf & vbCrLf
+tblName = InputBox("Enter the table code (not name) to inspect:", "Table Selector")
+If tblName = "" Then
+    MsgBox "No table name provided. Exiting.", vbExclamation, "Canceled"
+    WScript.Quit
+End If
+
+found = False
+output = "Inspecting VARCHAR2 columns in table: " & tblName & vbCrLf & vbCrLf
 
 For Each tbl In ActiveModel.Tables
-    If Not tbl.IsShortcut Then
-        output = output & "Table: " & tbl.Code & vbCrLf
+    If Not tbl.IsShortcut And UCase(tbl.Code) = UCase(tblName) Then
+        found = True
         For Each col In tbl.Columns
             If UCase(col.DataType) = "VARCHAR2" Then
-                ' Default to BYTE unless we can explicitly detect CHAR semantics
                 semantics = col.GetExtendedAttribute("LengthSemantics")
                 
                 output = output & "  Column: " & col.Code & vbCrLf
                 output = output & "    DataType: '" & col.DataType & "'" & vbCrLf
                 output = output & "    Length: " & col.Length & vbCrLf
                 output = output & "    Semantics: " & semantics & vbCrLf
-                
+
                 If semantics <> "CHAR" Then
                     output = output & "    --> Needs update to CHAR semantics" & vbCrLf
                 End If
+                output = output & vbCrLf
             End If
         Next
-        output = output & vbCrLf
+        Exit For
     End If
 Next
 
-MsgBox output, vbOKOnly, "VARCHAR2 Semantics Check"
+If Not found Then
+    MsgBox "Table '" & tblName & "' not found in the model.", vbCritical, "Error"
+Else
+    MsgBox output, vbOKOnly, "VARCHAR2 Semantics Check"
+End If
+
 
 
 
