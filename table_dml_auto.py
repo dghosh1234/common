@@ -1,57 +1,70 @@
 Option Explicit
 
 Dim tbl, col
-Dim targetTableCode
-Dim found, updatedCount
-Dim runUpdate
+Dim found, affectedCount
+Dim report
+Dim runCheck
+Dim fileName, filePath
+Dim file
 
 ' Initialize
-updatedCount = 0
+affectedCount = 0
 found = False
-runUpdate = True
+report = ""
 
-' Prompt user for PHYSICAL table name (Code)
-targetTableCode = InputBox("Enter the physical table name to update (e.g. CUSTOMER_TBL):", "Target Table")
+' Specify the output file path
+filePath = "C:\path\to\your\directory\" ' Adjust this path as needed
+fileName = "Varchar2_Columns_Needing_Update_Report.txt"
 
-If targetTableCode = "" Then
-    MsgBox "No table name entered. Script cancelled.", vbExclamation, "Cancelled"
-    runUpdate = False
-End If
+' Open file for writing
+Set file = CreateObject("Scripting.FileSystemObject").CreateTextFile(filePath & fileName, True)
 
-If runUpdate Then
-    ' Search for the table using .Code (physical name)
-    For Each tbl In ActiveModel.Tables
-        If Not tbl.IsShortcut And UCase(tbl.Code) = UCase(targetTableCode) Then
-            found = True
-            For Each col In tbl.Columns
-                If UCase(col.DataType) = "VARCHAR2" Then
-                    ' Check for LengthSemantics property existence
-                    On Error Resume Next
-                    Dim colSemantics
-                    colSemantics = col.LengthSemantics
-                    If Err.Number <> 0 Then
-                        ' If no LengthSemantics found, assume it's in BYTE, and update to CHAR
-                        col.LengthSemantics = "CHAR"
-                        updatedCount = updatedCount + 1
-                        Err.Clear
-                    Else
-                        ' Update if semantics is not CHAR
-                        If Trim(UCase(col.LengthSemantics)) <> "CHAR" Then
-                            col.LengthSemantics = "CHAR"
-                            updatedCount = updatedCount + 1
-                        End If
+' Write header to file
+file.WriteLine("Report: Tables and Columns Needing Update to VARCHAR2(n CHAR)")
+file.WriteLine("Generated on: " & Now)
+file.WriteLine(String(80, "="))
+
+' Scan all tables and columns
+For Each tbl In ActiveModel.Tables
+    If Not tbl.IsShortcut Then
+        For Each col In tbl.Columns
+            If UCase(col.DataType) = "VARCHAR2" Then
+                ' Check for LengthSemantics property existence
+                On Error Resume Next
+                Dim colSemantics
+                colSemantics = col.LengthSemantics
+                If Err.Number <> 0 Then
+                    ' If no LengthSemantics found, assume it's in BYTE, and needs update
+                    If Trim(UCase(col.DataType)) = "VARCHAR2" Then
+                        report = "Table: " & tbl.Code & " | Column: " & col.Code & " (Length: " & col.Length & ") needs update to VARCHAR2(n CHAR)"
+                        file.WriteLine(report)
+                        affectedCount = affectedCount + 1
                     End If
-                    On Error GoTo 0
+                    Err.Clear
+                Else
+                    ' If LengthSemantics is not CHAR, it's also an affected column
+                    If Trim(UCase(col.LengthSemantics)) <> "CHAR" Then
+                        report = "Table: " & tbl.Code & " | Column: " & col.Code & " (Length: " & col.Length & ") needs update to VARCHAR2(n CHAR)"
+                        file.WriteLine(report)
+                        affectedCount = affectedCount + 1
+                    End If
                 End If
-            Next
-        End If
-    Next
-
-    If Not found Then
-        MsgBox "Table with code '" & targetTableCode & "' not found in the model.", vbExclamation, "Table Not Found"
-    ElseIf updatedCount = 0 Then
-        MsgBox "No VARCHAR2 columns needed updating in table '" & targetTableCode & "'.", vbInformation, "No Changes Made"
-    Else
-        MsgBox updatedCount & " VARCHAR2 column(s) in table '" & targetTableCode & "' updated to use CHAR semantics.", vbInformation, "Update Complete"
+                On Error GoTo 0
+            End If
+        Next
     End If
+Next
+
+' Write footer to file
+file.WriteLine(String(80, "="))
+file.WriteLine("Total affected columns: " & affectedCount)
+
+' Close the file
+file.Close()
+
+' Display result message
+If affectedCount = 0 Then
+    MsgBox "No VARCHAR2 columns need updating in any table.", vbInformation, "No Updates Required"
+Else
+    MsgBox "Report generated: " & filePath & fileName & vbCrLf & "Total affected columns: " & affectedCount, vbInformation, "Report Generated"
 End If
