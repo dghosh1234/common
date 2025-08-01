@@ -27,17 +27,14 @@ For Each tbl In ActiveModel.Tables
                 End If
                 On Error GoTo 0
 
-                ' Determine correct suggestion
-                If UCase(semantics) = "CHAR" Then
-                    suggestion = "OK"
-                Else
+                ' Only log if CHAR semantics are missing
+                If UCase(semantics) <> "CHAR" Then
                     cleanLength = col.Length
                     suggestion = "Change to VARCHAR2(" & cleanLength & " CHAR) semantics"
-                End If
 
-                ' Write row with quoted/escaped values
-                outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & col.Length & """,""" & semantics & """,""" & suggestion & """"
-                file.WriteLine outputLine
+                    outputLine = """" & tbl.Code & """,""" & col.Code & """,""" & col.DataType & """,""" & col.Length & """,""" & semantics & """,""" & suggestion & """"
+                    file.WriteLine outputLine
+                End If
             End If
         Next
     End If
@@ -45,4 +42,4 @@ Next
 
 file.Close
 
-MsgBox "✅ CSV report saved to Desktop as 'varchar2_semantics_report.csv'", vbInformation, "VARCHAR2 Semantics Report"
+MsgBox "✅ CSV report (discrepancies only) saved to Desktop as 'varchar2_semantics_report.csv'", vbInformation, "VARCHAR2 CHAR Semantics Report"
