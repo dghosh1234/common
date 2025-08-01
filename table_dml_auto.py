@@ -1,6 +1,40 @@
 Option Explicit
 
 Dim tbl, col
+Dim output, semantics
+
+output = "Inspecting all VARCHAR2 columns in the Physical Model:" & vbCrLf & vbCrLf
+
+For Each tbl In ActiveModel.Tables
+    If Not tbl.IsShortcut Then
+        output = output & "Table: " & tbl.Code & vbCrLf
+        For Each col In tbl.Columns
+            If UCase(col.DataType) = "VARCHAR2" Then
+                ' Default to BYTE unless we can explicitly detect CHAR semantics
+                semantics = col.GetExtendedAttribute("LengthSemantics")
+                
+                output = output & "  Column: " & col.Code & vbCrLf
+                output = output & "    DataType: '" & col.DataType & "'" & vbCrLf
+                output = output & "    Length: " & col.Length & vbCrLf
+                output = output & "    Semantics: " & semantics & vbCrLf
+                
+                If semantics <> "CHAR" Then
+                    output = output & "    --> Needs update to CHAR semantics" & vbCrLf
+                End If
+            End If
+        Next
+        output = output & vbCrLf
+    End If
+Next
+
+MsgBox output, vbOKOnly, "VARCHAR2 Semantics Check"
+
+
+
+
+Option Explicit
+
+Dim tbl, col
 Dim output
 
 output = "Inspecting all columns in the Physical Model:" & vbCrLf & vbCrLf
