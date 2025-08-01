@@ -1,12 +1,24 @@
 Option Explicit
 
-If ActiveModel Is Nothing Then
-    MsgBox "❌ No model is active!", vbCritical
-Else
-    MsgBox "✅ Active model name: " & ActiveModel.Name & vbCrLf & _
-           "Model Type: " & ActiveModel.Type & vbCrLf & _
-           "Number of tables: " & ActiveModel.Tables.Count
+Dim mdl
+Set mdl = ActiveModel
+
+If mdl Is Nothing Then
+    MsgBox "❌ No active model detected. Please make sure a PDM is open and selected.", vbCritical, "Script Error"
+    WScript.Quit
 End If
+
+MsgBox "✅ Active model name: " & mdl.Name & vbCrLf & _
+       "Model Type: " & mdl.Type & vbCrLf & _
+       "Number of Tables: " & mdl.Tables.Count, vbInformation, "Model Info"
+
+Dim tbl, col
+For Each tbl In mdl.Tables
+    MsgBox "Table: " & tbl.Code & ", Columns: " & tbl.Columns.Count
+    For Each col In tbl.Columns
+        MsgBox "  → Column: " & col.Code & ", DataType: " & col.DataType
+    Next
+Next
 
 
 
