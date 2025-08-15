@@ -1,49 +1,15 @@
-Option Explicit
+No, I haven’t checked the code into Git yet, nor have I added it to the ADTF section of the wiki. I’ll coordinate with Jim to complete both of these tasks.
 
-Dim tbl, col, semantics, cleanLength
-Dim output, discrepFound, discrepCount
-Dim fso, outFile, filePath
+As you know, I’m currently fully focused on developing the DM table creation scripts for the ETLs. I kindly request a few more days to complete my assigned work. Once that is done, I’ll proceed with checking in the code and updating the wiki page with more meaningful documentation.
 
-output = "Discrepancy Report: VARCHAR2 columns with BYTE semantics" & vbCrLf & vbCrLf
-discrepFound = False
-discrepCount = 0
+Regarding the current implementation:
 
-For Each tbl In ActiveModel.Tables
-    If Not tbl.IsShortcut Then
-        For Each col In tbl.Columns
-            If InStr(UCase(col.DataType), "VARCHAR2") > 0 Then
-                On Error Resume Next
-                semantics = col.GetExtendedAttribute("LengthSemantics")
-                If Err.Number <> 0 Then
-                    semantics = "(not available)"
-                    Err.Clear
-                End If
-                On Error GoTo 0
+The logic prioritizes population data from the source table for insert records, and from the target table for updates.
 
-                cleanLength = col.Length
+If no data is found in the target based on the given criteria for an update, it will attempt to insert from the source and then perform an update.
 
-                If UCase(semantics) <> "CHAR" Then
-                    discrepFound = True
-                    discrepCount = discrepCount + 1
-                    output = output & "Table: " & tbl.Code & vbCrLf
-                    output = output & "  Column: " & col.Code & vbCrLf
-                    output = output & "    DataType: " & col.DataType & vbCrLf
-                    output = output & "    Length: " & cleanLength & vbCrLf
-                    output = output & "    Semantics: " & semantics & vbCrLf
-                    output = output & "    ❗ Suggestion: Change to VARCHAR2(" & cleanLength & " CHAR)" & vbCrLf & vbCrLf
-                End If
-            End If
-        Next
-    End If
-Next
+If neither source nor target have the required data, it will generate synthetic data (for both insert and update scenarios).
 
-If discrepFound Then
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    filePath = "C:\Users\Public\varchar2_semantics_report.txt" ' Change this path if needed
-    Set outFile = fso.CreateTextFile(filePath, True)
-    outFile.Write output
-    outFile.Close
-    MsgBox "Discrepancy report generated (" & discrepCount & " issues found)." & vbCrLf & "Saved to: " & filePath, vbInformation, "Report Complete"
-Else
-    MsgBox "No VARCHAR2 columns with BYTE semantics found in the model.", vbInformation, "All Good"
-End If
+While inserting from the source, if the target table has additional columns, the implementation will generate synthetic values for those columns.
+
+It also ensures all integrity constraints are respected and handles data for virtual columns appropriately.
