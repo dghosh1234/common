@@ -1,3 +1,0 @@
-Due to limited licensing, the Approver team needs to verify that you are actively deploying code. To meet this requirement, developers must commit and merge code that triggers a build. This will generate an SCM-type entry in the Jenkins login report, which is used for validation.
-
-After initiating your first deployment and receiving the Jenkins build confirmation email, please wait 3–4 days before submitting the AIMS request. This ensures that the necessary activity is visible for review and approval.
