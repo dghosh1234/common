@@ -1,15 +1,3 @@
-No, I haven’t checked the code into Git yet, nor have I added it to the ADTF section of the wiki. I’ll coordinate with Jim to complete both of these tasks.
+Due to limited licensing, the Approver team needs to verify that you are actively deploying code. To meet this requirement, developers must commit and merge code that triggers a build. This will generate an SCM-type entry in the Jenkins login report, which is used for validation.
 
-As you know, I’m currently fully focused on developing the DM table creation scripts for the ETLs. I kindly request a few more days to complete my assigned work. Once that is done, I’ll proceed with checking in the code and updating the wiki page with more meaningful documentation.
-
-Regarding the current implementation:
-
-The logic prioritizes population data from the source table for insert records, and from the target table for updates.
-
-If no data is found in the target based on the given criteria for an update, it will attempt to insert from the source and then perform an update.
-
-If neither source nor target have the required data, it will generate synthetic data (for both insert and update scenarios).
-
-While inserting from the source, if the target table has additional columns, the implementation will generate synthetic values for those columns.
-
-It also ensures all integrity constraints are respected and handles data for virtual columns appropriately.
+After initiating your first deployment and receiving the Jenkins build confirmation email, please wait 3–4 days before submitting the AIMS request. This ensures that the necessary activity is visible for review and approval.
